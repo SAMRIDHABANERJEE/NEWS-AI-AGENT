@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>NewsAI — Intelligent News Agent</title>
+  <title>NewsAI — Intelligent News Agent (OpenRouter)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet"/>
   <style>
@@ -720,9 +720,9 @@
 
       <!-- API Key -->
       <div class="api-setup">
-        <div class="api-setup-title">🔑 Anthropic API Key</div>
-        <div style="font-size:0.72rem;color:var(--grey);line-height:1.4">Required to power the AI. Your key stays in your browser only.</div>
-        <input class="api-input" type="password" id="apiKeyInput" placeholder="sk-ant-api03-…"/>
+        <div class="api-setup-title">🔑 OpenRouter API Key</div>
+        <div style="font-size:0.72rem;color:var(--grey);line-height:1.4">Get your free key at <a href="https://openrouter.ai/keys" target="_blank" style="color:var(--gold);text-decoration:none;">openrouter.ai/keys</a>. Stays in your browser only.</div>
+        <input class="api-input" type="password" id="apiKeyInput" placeholder="sk-or-v1-…"/>
         <button class="save-key-btn" id="saveKeyBtn">Save Key</button>
       </div>
 
@@ -757,7 +757,7 @@
         <div class="status-dot" id="statusDot"></div>
         <div>
           <div class="status-text" id="statusText">No API key</div>
-          <div class="status-model">claude-sonnet-4-20250514</div>
+          <div class="status-model">openrouter · perplexity/sonar</div>
         </div>
       </div>
     </aside>
@@ -811,16 +811,16 @@
   ═══════════════════════════════════════════════════════ */
 
   // ── STATE ──────────────────────────────────────────────
-  let apiKey       = localStorage.getItem('newsai_key') || '';
+  let apiKey       = localStorage.getItem('newsai_or_key') || '';
   let conversation = []; // full message history for multi-turn
   let busy         = false;
 
-  const SYSTEM_PROMPT = `You are NewsAI, an expert news intelligence agent. You have access to the web_search tool to fetch live, current news and information.
+  const SYSTEM_PROMPT = `You are NewsAI, an expert news intelligence agent with access to real-time web search.
 
 Your personality: sharp, direct, knowledgeable — like a senior editor at a world-class news organisation.
 
 Rules:
-- For any news or current events query, ALWAYS use web_search to get the latest information. Never rely solely on training data for news.
+- For any news or current events query, search the web for the latest information. Never rely solely on training data for news.
 - Structure news summaries clearly: use **bold** for key names/terms, and organised sections when covering multiple stories.
 - When listing news stories, format each with a headline and 1-2 sentence summary.
 - For general questions (not news), answer directly from knowledge.
@@ -841,7 +841,7 @@ Rules:
 
   // ── INIT ───────────────────────────────────────────────
   if (apiKey) {
-    apiKeyInput.value = apiKey.slice(0, 10) + '…';
+    apiKeyInput.value = apiKey.slice(0, 12) + '…';
     setStatus('ready', 'Ready');
   }
 
@@ -850,13 +850,13 @@ Rules:
   // ── API KEY ────────────────────────────────────────────
   saveKeyBtn.addEventListener('click', () => {
     const val = apiKeyInput.value.trim();
-    if (!val || !val.startsWith('sk-ant')) {
-      showToast('Enter a valid Anthropic key (starts with sk-ant)', 'err');
+    if (!val || !val.startsWith('sk-or-')) {
+      showToast('Enter a valid OpenRouter key (starts with sk-or-)', 'err');
       return;
     }
     apiKey = val;
-    localStorage.setItem('newsai_key', val);
-    apiKeyInput.value = val.slice(0, 10) + '…';
+    localStorage.setItem('newsai_or_key', val);
+    apiKeyInput.value = val.slice(0, 12) + '…';
     setStatus('ready', 'Ready');
     showToast('API key saved ✓', 'ok');
   });
@@ -951,27 +951,25 @@ Rules:
     }
   }
 
-  // ── CLAUDE API CALL ────────────────────────────────────
+  // ── OPENROUTER API CALL ────────────────────────────────
+  // Uses perplexity/sonar — has built-in live web search, no tool loop needed
   async function callClaude(messages) {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-beta': 'interleaved-thinking-2025-05-14',
-        'anthropic-dangerous-direct-browser-access': 'true',
+        'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': window.location.href,
+        'X-Title': 'NewsAI Agent',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'perplexity/sonar',   // live web search built-in
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          ...messages
+        ],
         max_tokens: 4096,
-        system: SYSTEM_PROMPT,
-        tools: [{
-          type: 'web_search_20250305',
-          name: 'web_search',
-          max_uses: 5,
-        }],
-        messages,
+        temperature: 0.7,
       }),
     });
 
@@ -981,79 +979,7 @@ Rules:
     }
 
     const data = await res.json();
-
-    // Handle tool use loop (agentic)
-    if (data.stop_reason === 'tool_use') {
-      return await handleToolLoop(data, messages);
-    }
-
-    return extractText(data);
-  }
-
-  // Agentic tool use loop — handles web_search results
-  async function handleToolLoop(initialData, messages) {
-    let current = initialData;
-    let msgs = [...messages];
-
-    while (current.stop_reason === 'tool_use') {
-      setStatus('busy', 'Searching web…');
-
-      // Add assistant turn (with tool_use blocks)
-      const assistantContent = current.content;
-      msgs.push({ role: 'assistant', content: assistantContent });
-
-      // Build tool_result blocks — web_search handles itself on Anthropic's side
-      // We just pass back an empty tool_result to continue the loop
-      const toolResults = assistantContent
-        .filter(b => b.type === 'tool_use')
-        .map(b => ({
-          type: 'tool_result',
-          tool_use_id: b.id,
-          content: '{}', // Anthropic handles actual search server-side
-        }));
-
-      msgs.push({ role: 'user', content: toolResults });
-
-      setStatus('busy', 'Processing results…');
-
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 4096,
-          system: SYSTEM_PROMPT,
-          tools: [{
-            type: 'web_search_20250305',
-            name: 'web_search',
-            max_uses: 5,
-          }],
-          messages: msgs,
-        }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err?.error?.message || `HTTP ${res.status}`);
-      }
-
-      current = await res.json();
-    }
-
-    return extractText(current);
-  }
-
-  function extractText(data) {
-    return (data.content || [])
-      .filter(b => b.type === 'text')
-      .map(b => b.text)
-      .join('\n')
-      .trim() || 'No response received.';
+    return data.choices?.[0]?.message?.content || 'No response received.';
   }
 
   // ── RENDER HELPERS ─────────────────────────────────────
