@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>NewsAI — Intelligent News Agent (OpenRouter)</title>
+  <title>SAMTINK AI — Intelligent News Agent</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet"/>
   <style>
@@ -713,7 +713,7 @@
       <div class="brand">
         <div class="brand-icon">📰</div>
         <div>
-          <div class="brand-name">NewsAI</div>
+          <div class="brand-name">SAMTINK AI</div>
           <div class="brand-tag">INTELLIGENT AGENT</div>
         </div>
       </div>
@@ -724,6 +724,7 @@
         <div style="font-size:0.72rem;color:var(--grey);line-height:1.4">Get your free key at <a href="https://openrouter.ai/keys" target="_blank" style="color:var(--gold);text-decoration:none;">openrouter.ai/keys</a>. Stays in your browser only.</div>
         <input class="api-input" type="password" id="apiKeyInput" placeholder="sk-or-v1-…"/>
         <button class="save-key-btn" id="saveKeyBtn">Save Key</button>
+        <button class="save-key-btn" id="changeKeyBtn" style="margin-top:0.3rem;background:transparent;border:1px solid rgba(245,200,66,0.3);color:var(--gold);">🔄 Change Key</button>
       </div>
 
       <!-- Quick Topics -->
@@ -767,7 +768,7 @@
       <!-- Topbar -->
       <div class="topbar">
         <div class="topbar-left">
-          <h1>News Intelligence Agent</h1>
+          <h1>SAMTINK AI</h1>
           <p>Ask anything · Live web search · Daily briefings</p>
         </div>
         <div class="topbar-right">
@@ -806,16 +807,16 @@
 
   <script>
   /* ═══════════════════════════════════════════════════════
-     NewsAI — Core Application
+     SAMTINK AI — Core Application
      Direct calls to Anthropic API with web_search tool
   ═══════════════════════════════════════════════════════ */
 
   // ── STATE ──────────────────────────────────────────────
-  let apiKey       = localStorage.getItem('newsai_or_key') || '';
+  let apiKey       = localStorage.getItem('samtink_or_key') || '';
   let conversation = []; // full message history for multi-turn
   let busy         = false;
 
-  const SYSTEM_PROMPT = `You are NewsAI, an expert news intelligence agent with access to real-time web search.
+  const SYSTEM_PROMPT = `You are SAMTINK AI, an expert news intelligence agent with access to real-time web search.
 
 Your personality: sharp, direct, knowledgeable — like a senior editor at a world-class news organisation.
 
@@ -841,8 +842,8 @@ Rules:
 
   // ── INIT ───────────────────────────────────────────────
   // Clear any old Anthropic key that may be saved from previous version
-  if (localStorage.getItem('newsai_key')) {
-    localStorage.removeItem('newsai_key');
+  if (localStorage.getItem('samtink_key')) {
+    localStorage.removeItem('samtink_key');
   }
 
   if (apiKey) {
@@ -855,17 +856,31 @@ Rules:
   // ── API KEY ────────────────────────────────────────────
   saveKeyBtn.addEventListener('click', () => {
     const val = apiKeyInput.value.trim();
+    // Ignore if user clicks Save on an already-masked key (ends with …)
+    if (val.endsWith('…')) {
+      showToast('Key already saved ✓', 'ok');
+      return;
+    }
     if (!val || val.length < 20) {
-      showToast('Enter a valid OpenRouter key (sk-or-v1-…)', 'err');
+      showToast('Key too short — paste the full key from openrouter.ai/keys', 'err');
       return;
     }
     apiKey = val;
-    localStorage.setItem('newsai_or_key', val);
+    localStorage.setItem('samtink_or_key', val);
     apiKeyInput.value = val.slice(0, 12) + '…';
     setStatus('ready', 'Ready');
     showToast('API key saved ✓', 'ok');
   });
 
+  // ── CHANGE KEY ─────────────────────────────────────────
+  document.getElementById('changeKeyBtn').addEventListener('click', () => {
+    apiKey = '';
+    localStorage.removeItem('samtink_or_key');
+    apiKeyInput.value = '';
+    apiKeyInput.focus();
+    setStatus('', 'No API key');
+    showToast('Key cleared — paste your new key', 'ok');
+  });
   // ── TOPIC CHIPS ────────────────────────────────────────
   document.querySelectorAll('.topic-chip').forEach(chip => {
     chip.addEventListener('click', () => {
@@ -948,7 +963,7 @@ Rules:
       typingEl.remove();
       addAIMsg(`**Error:** ${err.message}\n\nPlease check your API key and try again.`);
       setStatus('error', 'Error');
-      console.error('[NewsAI]', err);
+      console.error('[SAMTINK AI]', err);
     } finally {
       busy = false;
       sendBtn.disabled = false;
@@ -965,7 +980,7 @@ Rules:
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
         'HTTP-Referer': window.location.href,
-        'X-Title': 'NewsAI Agent',
+        'X-Title': 'SAMTINK AI',
       },
       body: JSON.stringify({
         model: 'perplexity/sonar',   // live web search built-in
@@ -980,7 +995,14 @@ Rules:
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err?.error?.message || `HTTP ${res.status}`);
+      const msg = err?.error?.message || '';
+      if (res.status === 401 || msg.toLowerCase().includes('user not found') || msg.toLowerCase().includes('invalid')) {
+        throw new Error('Invalid API key. Go to openrouter.ai/keys, copy your key fresh, clear the field and paste it again.');
+      }
+      if (res.status === 402) {
+        throw new Error('No credits left on your OpenRouter account. Add credits at openrouter.ai/credits.');
+      }
+      throw new Error(msg || `HTTP ${res.status} — check your API key and try again.`);
     }
 
     const data = await res.json();
@@ -1011,7 +1033,7 @@ Rules:
       <div class="msg-avatar">📰</div>
       <div class="msg-body">
         <div class="msg-meta">
-          <span class="msg-name">NewsAI</span>
+          <span class="msg-name">SAMTINK AI</span>
           <span class="msg-time">${nowTime()}</span>
         </div>
         <div class="msg-bubble">${renderMarkdown(markdown)}</div>
@@ -1036,7 +1058,7 @@ Rules:
     el.className = 'welcome';
     el.innerHTML = `
       <div class="welcome-icon">📰</div>
-      <h2>Your <span>News Intelligence</span><br/>Agent is ready.</h2>
+      <h2>Your <span>SAMTINK AI</span><br/>Agent is ready.</h2>
       <p>Ask me anything — breaking news, deep dives, daily briefings, analysis. I search the web in real time to give you the most current information.</p>
       <div class="quick-prompts">
         <button class="qp-btn" data-prompt="Give me today's top 5 world news headlines with brief summaries.">☀️ Today's Briefing</button>
