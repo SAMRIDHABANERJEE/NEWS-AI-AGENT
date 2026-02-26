@@ -1,0 +1,179 @@
+{
+  "name": "NEWS AI AGENT",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        488,
+        0
+      ],
+      "id": "bba0a37e-b1d6-401b-99f0-a0e1a0455d55",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        368,
+        224
+      ],
+      "id": "ddfe91df-ad71-48f4-a869-8cb36a02661e",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "pu9PaRH8eT7Pl0nM",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        496,
+        224
+      ],
+      "id": "0ac9b569-6f2e-426b-879c-90ea5cbe0a47",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "url": "https://newsapi.org/v2/everything?q=tesla&from=2026-01-26&sortBy=publishedAt&apiKey=4db9c76960874713aa6d3d26591fbe55",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        624,
+        224
+      ],
+      "id": "ae04b5b5-d770-41c8-b3e3-42dc34b96daa",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "sendTo": "samridha_bit2024@msit.edu.in",
+        "subject": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Subject', ``, 'string') }}",
+        "emailType": "text",
+        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.2,
+      "position": [
+        752,
+        224
+      ],
+      "id": "7f6fb3a8-ceca-4610-b52a-a45d724b6d63",
+      "name": "Send a message in Gmail",
+      "webhookId": "cde99b35-89ea-4558-98f0-742e3c09717c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "yvYLkrgHdKTmxzgs",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "51723222-7b93-4e20-91bb-479ba96f98f2",
+      "name": "When Chat Message Received",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        144,
+        0
+      ],
+      "webhookId": "1dc13941-0ea7-4e5f-b939-83ec239084c1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message in Gmail": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Chat Message Received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "332d65ea-7ce4-468a-b02c-8ac581d94d1a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "cba1d5d93b3b7cc3d5a97e5f24d265efde3fbd006f5bae11b08085e70fb2ea5b"
+  },
+  "id": "6A7M6GiJ9Ig5vSaT",
+  "tags": []
+}
