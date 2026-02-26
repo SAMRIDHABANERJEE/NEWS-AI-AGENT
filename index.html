@@ -840,6 +840,11 @@ Rules:
   const toast       = document.getElementById('toast');
 
   // ── INIT ───────────────────────────────────────────────
+  // Clear any old Anthropic key that may be saved from previous version
+  if (localStorage.getItem('newsai_key')) {
+    localStorage.removeItem('newsai_key');
+  }
+
   if (apiKey) {
     apiKeyInput.value = apiKey.slice(0, 12) + '…';
     setStatus('ready', 'Ready');
@@ -850,8 +855,8 @@ Rules:
   // ── API KEY ────────────────────────────────────────────
   saveKeyBtn.addEventListener('click', () => {
     const val = apiKeyInput.value.trim();
-    if (!val || !val.startsWith('sk-or-')) {
-      showToast('Enter a valid OpenRouter key (starts with sk-or-)', 'err');
+    if (!val || val.length < 20) {
+      showToast('Enter a valid OpenRouter key (sk-or-v1-…)', 'err');
       return;
     }
     apiKey = val;
@@ -910,7 +915,7 @@ Rules:
     if (!text || busy) return;
 
     if (!apiKey) {
-      showToast('Please enter your Anthropic API key in the sidebar', 'err');
+      showToast('Please enter your OpenRouter API key in the sidebar', 'err');
       apiKeyInput.focus();
       return;
     }
